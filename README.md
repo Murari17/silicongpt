@@ -1,3 +1,15 @@
+---
+title: Small Language Model
+emoji: 🤖
+colorFrom: indigo
+colorTo: blue
+sdk: gradio
+sdk_version: 4.0.0
+python_version: "3.11"
+app_file: app.py
+pinned: false
+---
+
 # Small Language Model
 
 A local question-answering system that learns from PDF documents using a **GPT-style transformer** with a hybrid generation + retrieval inference strategy.
