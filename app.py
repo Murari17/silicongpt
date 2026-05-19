@@ -382,7 +382,7 @@ def build_ui() -> gr.Blocks:
             with gr.Column(elem_id="hero"):
                 gr.Markdown(
                     """
-                    # Small Language Model
+                    # SiliconGPT Core 1.0
                     *Powered by a locally-trained GPT-style transformer with retrieval fallback*
                     """
                 )
@@ -398,7 +398,8 @@ def build_ui() -> gr.Blocks:
                             rep_penalty = gr.Slider(1.0, 2.0, value=1.15, step=0.05, label="Repetition Penalty")
 
                         gr.Markdown("<div class='label'>Chatbot</div>")
-                        chatbot = gr.Chatbot(elem_id="chatbot", label=None, show_copy_button=False)
+                        gr.Markdown("### How can I help you today?")
+                        chatbot = gr.Chatbot(elem_id="chatbot", label=None)
 
                         state = gr.State(_new_chat_state())
 
@@ -416,6 +417,8 @@ def build_ui() -> gr.Blocks:
                             retry_btn = gr.Button("Retry", elem_id="retry-btn")
                             undo_btn = gr.Button("Undo", elem_id="undo-btn")
                             clear_btn = gr.Button("Clear", elem_id="clear-btn")
+
+                        gr.Markdown("<div style='padding: 4px 18px 16px; color:#9aa8cf; font-size: 12px;'>SiliconGPT can make mistakes. Check important information.</div>")
 
                     message_box.submit(
                         submit_message,
