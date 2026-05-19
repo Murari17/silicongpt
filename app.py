@@ -194,18 +194,16 @@ def build_ui() -> gr.Blocks:
 
         with gr.Row():
             with gr.Column(scale=4):
+                with gr.Accordion(label="Generation Settings", open=False):
+                    temperature = gr.Slider(0.1, 2.0, value=0.7, step=0.05, label="Temperature")
+                    top_k = gr.Slider(1, 100, value=40, step=1, label="Top-K")
+                    top_p = gr.Slider(0.1, 1.0, value=0.9, step=0.05, label="Top-P (Nucleus)")
+                    max_tokens = gr.Slider(32, 256, value=128, step=16, label="Max Tokens")
+                    rep_penalty = gr.Slider(1.0, 2.0, value=1.15, step=0.05, label="Repetition Penalty")
+
                 chatbot = gr.ChatInterface(
                     fn=respond,
-                    additional_inputs=[
-                        gr.Slider(0.1, 2.0, value=0.7, step=0.05, label="Temperature"),
-                        gr.Slider(1, 100, value=40, step=1, label="Top-K"),
-                        gr.Slider(0.1, 1.0, value=0.9, step=0.05, label="Top-P (Nucleus)"),
-                        gr.Slider(32, 256, value=128, step=16, label="Max Tokens"),
-                        gr.Slider(1.0, 2.0, value=1.15, step=0.05, label="Repetition Penalty"),
-                    ],
-                    additional_inputs_accordion=gr.Accordion(
-                        label="Generation Settings", open=False
-                    ),
+                    additional_inputs=[temperature, top_k, top_p, max_tokens, rep_penalty],
                 )
 
             with gr.Column(scale=1, min_width=250):
