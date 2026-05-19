@@ -2,3 +2,6 @@ pdfminer.six
 nltk
 sentencepiece
 torch
+gradio
+scikit-learn
+rank_bm25

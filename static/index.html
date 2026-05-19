@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SiliconGPT - Local AI Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="background-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar for Settings & Info -->
+        <aside class="sidebar glass-panel">
+            <div class="logo-container">
+                <div class="logo-icon">
+                </div>
+                <h1>SiliconGPT</h1>
+            </div>
+            
+            <p class="subtitle">Document Knowledge Engine</p>
+
+            <div class="footer-info">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                Offline & GPU Accelerated
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="chat-container glass-panel">
+            <div class="chat-header">
+                <div style="display:flex; align-items:center; gap: 8px;">
+                    <h2>SiliconGPT Core</h2>
+                </div>
+                <div class="status-indicator">
+                    <div class="pulse-dot"></div>
+                    <span>System Active</span>
+                </div>
+            </div>
+
+            <div class="chat-history" id="chat-history">
+                <div class="message ai-message fade-in">
+                    <div class="avatar ai-avatar">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="10" rx="2"></rect>
+                            <circle cx="12" cy="5" r="2"></circle>
+                            <path d="M12 7v4"></path>
+                            <line x1="8" y1="16" x2="8" y2="16"></line>
+                            <line x1="16" y1="16" x2="16" y2="16"></line>
+                        </svg>
+                    </div>
+                    <div class="message-content">
+                        <p>Hello. I am SiliconGPT, a local Transformer-based intelligence trained on your PDF materials. How can I assist you today?</p>
+                        <span class="source-tag">System Ready</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-container">
+                <form id="chat-form" class="input-glass">
+                    <input type="text" id="user-input" placeholder="Ask about hardness of water, environmental pollution..." autocomplete="off" required>
+                    <button type="submit" id="send-btn">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="20" height="20">
+                            <path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

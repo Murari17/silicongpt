@@ -1,0 +1,238 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[a4paper,left=25mm,right=25mm,top=25mm,bottom=25mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{setspace}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{array}
+
+\setlength{\parskip}{0.45em}
+\setlength{\parindent}{0pt}
+\setstretch{1.15}
+\renewcommand{\arraystretch}{1.15}
+
+\title{Project Working Explanation\\\large Local PDF QA System (Theory Version)}
+\author{Final Year Project Documentation}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Introduction}
+This project is a local question-answering system that learns from PDF documents.
+The full workflow starts from raw PDF files and ends with a command-line interface where a user asks a question and receives an answer.
+The system is built on a modern, high-performance GPT-style decoder architecture capable of running efficiently on GPUs or falling back to CPUs, while remaining fully offline.
+The core idea is practical:
+\begin{itemize}[leftmargin=1.5em]
+    \item First, try to generate an answer using the trained language model.
+    \item If generated text is weak or unreliable, use retrieval fallback from the prepared sentence bank.
+\end{itemize}
+
+This hybrid behavior improves stability without requiring external APIs or cloud models.
+
+\section{Overall Working Theory}
+The project can be understood as two connected phases:
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Knowledge preparation and training phase}
+    \item \textbf{Question answering phase}
+\end{enumerate}
+
+In the first phase, the project converts unstructured PDF text into a clean training resource and trains a Transformer model.
+In the second phase, the trained model is used to answer user questions with a fallback mechanism that protects against irrelevant or low-quality outputs.
+
+\section{Phase 1: Knowledge Preparation and Training}
+\subsection{Step 1: PDF Text Extraction}
+The process begins in the \texttt{data/raw/} directory.
+All PDF files are read and converted into text using a PDF text extraction library.
+Each PDF produces one text file in \texttt{data/extracted/}.
+
+\textbf{Theory:}
+PDFs are presentation-oriented files, not structured knowledge files.
+Extraction converts visual document content into machine-readable plain text so downstream NLP steps can operate on it.
+
+\subsection{Step 2: Text Cleaning and Normalization}
+Extracted text usually contains noise such as odd symbols, repeated spaces, OCR artifacts, and formatting breaks.
+The cleaning module normalizes punctuation and spacing and merges all cleaned text into a single corpus file.
+
+\textbf{Theory:}
+A language model is very sensitive to input quality.
+If noisy patterns are not removed, the model learns these mistakes and generates unstable answers later.
+Cleaning is therefore a quality-control stage, not just formatting.
+
+\subsection{Step 3: Sentence Segmentation}
+The cleaned corpus is split into sentence-level lines and stored in \texttt{data/cleaned/sentences.txt}.
+
+\textbf{Theory:}
+Sentence-level storage has two direct benefits:
+\begin{itemize}[leftmargin=1.5em]
+    \item It gives retrieval fallback a compact factual memory source.
+    \item It provides manageable units for creating QA-style training samples.
+\end{itemize}
+
+\subsection{Step 4: QA-style Dataset Creation}
+The dataset creator converts sentence lines into multi-turn chat format using special tokens (\texttt{<|user|>}, \texttt{<|assistant|>}), generating up to 7 variants per sentence (definition, explanation, descriptive styles, etc.):
+\begin{verbatim}
+<|user|> What is <concept>?
+<|assistant|> <sentence>
+\end{verbatim}
+
+Current implementation uses a rich data augmentation strategy:
+\begin{enumerate}[leftmargin=1.5em]
+    \item Primary question from sentence pattern (definition-style)
+    \item Explanation and descriptive variants
+    \item Multi-sentence context windows for longer answers
+\end{enumerate}
+
+\textbf{Theory:}
+This step transforms passive text into supervised interaction format.
+Because inference will also use the same Ask/Answer prompt style, training and inference stay aligned.
+
+\subsection{Step 5: Tokenizer Training}
+A SentencePiece tokenizer is trained on the generated training text.
+It produces:
+\begin{itemize}[leftmargin=1.5em]
+    \item \texttt{tokenizer.model}
+    \item \texttt{tokenizer.vocab}
+\end{itemize}
+
+\textbf{Theory:}
+Tokenization is the bridge between language and model input.
+Instead of using full words only, subword tokenization handles rare and domain-specific terms better and makes training more robust on limited data.
+
+The training script loads tokenizer and QA records, tokenizes text, builds batches, and trains the Transformer using Mixed Precision (FP16) on GPU (or CPU). It employs an AdamW optimizer, a Cosine Learning Rate schedule with linear warmup, and gradient clipping, saving the best \texttt{model\_best.pth} based on validation loss.
+\textbf{Theory:}
+The model learns next-token prediction from contextual patterns.
+In simple terms, it learns how answers usually continue when a question is written in the project prompt format.
+
+\section{Model Theory}
+\subsection{Architecture Choice}
+The project uses a modern GPT-style decoder-only Transformer model. It incorporates advanced, state-of-the-art techniques such as RMSNorm (Pre-Norm) for training stability, Rotary Positional Embeddings (RoPE) to remove hard sequence length limits, SwiGLU Feed-Forward Networks for better expressivity, and Grouped Query Attention (GQA) for parameter and memory efficiency.
+
+\textbf{Why Transformer:}
+\begin{itemize}[leftmargin=1.5em]
+    \item It captures context better than simple n-gram or shallow sequence models.
+    \item It scales reasonably for small local experiments.
+    \item It supports autoregressive answer generation naturally.
+\end{itemize}
+
+\subsection{Causal Behavior and KV Cache}
+The causal attention mask ensures the model predicts tokens using only current and past context, not future tokens. During inference, a Key-Value (KV) Cache is utilized to store past attention states, meaning the model only needs to process the newest token rather than recomputing the entire sequence.
+
+\textbf{Theory:}
+This matches real answering behavior autoregressively and speeds up generation by 5-10x by avoiding redundant matrix multiplications.
+
+\section{Phase 2: Question Answering Theory}
+\subsection{Prompt-driven Generation}
+At runtime, the user enters a question.
+The system creates a prompt in the same format used during dataset creation:
+\begin{verbatim}
+<|user|> <user question>
+<|assistant|>
+\end{verbatim}
+Then the model generates answer tokens using advanced sampling settings including Top-K, Nucleus (Top-P) sampling, and repetition penalties.
+
+\textbf{Theory:}
+Prompt consistency helps reduce distribution mismatch.
+The model sees familiar structure, which improves coherence on small training corpora.
+
+\subsection{Weak Answer Detection}
+Generated output is checked with lightweight quality conditions such as:
+\begin{itemize}[leftmargin=1.5em]
+    \item too short
+    \item malformed markers
+    \item poor keyword coverage
+\end{itemize}
+
+\textbf{Theory:}
+A local small model may produce fluent but irrelevant text.
+Weak-answer detection acts as a reliability filter before final output is shown.
+
+\subsection{Retrieval Fallback Theory}
+If generation looks weak, the system searches \texttt{sentences.txt} using a TF-IDF cosine similarity approach and scores candidate lines by relevance.
+Current logic uses semantic overlap plus subject-aware checks for definition-style questions.
+
+\textbf{Key reliability rule:}
+For questions like ``What is ...'', fallback retrieval is accepted only if the candidate contains the asked subject phrase.
+This prevents topic drift, for example selecting a sentence from a different law or concept.
+
+\subsection{Final Decision Layer}
+The answer selection policy is intentionally simple:
+\begin{itemize}[leftmargin=1.5em]
+    \item Use generation when it is acceptable.
+    \item Use retrieval when generation is weak and retrieval confidence is strong.
+    \item If both are weak, return a safe ``not found clearly'' style response.
+\end{itemize}
+
+\textbf{Theory:}
+This decision layer trades style for correctness.
+It is better to return a conservative message than to return a confident but incorrect answer.
+
+\section{Role of Each Main File}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.28\linewidth} >{\raggedright\arraybackslash}p{0.67\linewidth}}
+\toprule
+\textbf{File} & \textbf{Role in system behavior} \\
+\midrule
+\texttt{textextraction.py} & Converts raw PDFs to text files. \\
+\texttt{clean\_text.py} & Removes text noise and builds a clean merged corpus. \\
+\texttt{sentence\_split.py} & Builds sentence-level knowledge source for retrieval and dataset input. \\
+\texttt{create\_dataset.py} & Creates QA-style training records from sentence data. \\
+\texttt{train\_tokenizer.py} & Learns tokenizer vocabulary from project training text. \\
+\texttt{model\_def.py} & Defines the modern GPT-style Transformer network design. \\
+\texttt{train.py} & Trains model with AdamW, Cosine LR, Mixed Precision, and exports checkpoint. \\
+\texttt{generate.py} & Handles interactive QA with KV-cache generation and TF-IDF fallback logic. \\
+\texttt{app.py} & Provides a Gradio-based interactive web interface. \\
+\texttt{run\_pipeline.py} & Orchestrates full pipeline execution with simple options. \\
+\bottomrule
+\end{longtable}
+
+\section{Why This Simplified Design Is Useful}
+\begin{itemize}[leftmargin=1.5em]
+    \item Easy to understand and explain in academic evaluation.
+    \item Easy to debug because each stage is separate and script-based.
+    \item Fully local and reproducible.
+    \item Safer outputs due to fallback and confidence gating.
+\end{itemize}
+
+\section{Current Limitations}
+\begin{itemize}[leftmargin=1.5em]
+    \item Sentence-level retrieval can miss context spread across multiple lines.
+    \item Small local training data limits generation fluency.
+    \item Domain mismatch questions may return safe fallback response.
+\end{itemize}
+
+\section{Suggested Improvements}
+\begin{enumerate}[leftmargin=1.5em]
+    \item Move from sentence-level retrieval to chunk-level retrieval.
+    \item Add semantic similarity scoring (e.g., dense embeddings) for better relevance.
+    \item Expand the dataset with more diverse QA pairs to improve generation fluency.
+\end{enumerate}
+
+\section{How to Run}
+\subsection{Train and build artifacts}
+\begin{verbatim}
+.\.venv\Scripts\python.exe run_pipeline.py --epochs 15
+\end{verbatim}
+
+\subsection{Ask questions via Web Interface}
+\begin{verbatim}
+.\.venv\Scripts\python.exe app.py
+\end{verbatim}
+
+\subsection{Ask questions via CLI}
+\begin{verbatim}
+.\.venv\Scripts\python.exe generate.py
+\end{verbatim}
+
+\section{Conclusion}
+This project demonstrates a complete local QA workflow from raw PDFs to interactive answers.
+Its strongest practical feature is the hybrid inference strategy:
+model generation for flexibility and retrieval fallback for reliability.
+The system is intentionally basic, clear, and suitable for final year project demonstration and further extension.
+
+\end{document}
