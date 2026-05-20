@@ -4,6 +4,7 @@ function App() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState("")
   const [isTyping, setIsTyping] = useState(false)
+  const logoUrl = `${import.meta.env.BASE_URL}logo.png`
   
   const historyRef = useRef(null)
   const textareaRef = useRef(null)
@@ -75,7 +76,7 @@ function App() {
     sendQuery(input);
   }
 
-  // Effect to handle typewriter animation
+  // Effect to handle typewriter animation.
   useEffect(() => {
     const lastMsg = messages[messages.length - 1]
     if (lastMsg && lastMsg.typingNow && lastMsg.text.length < lastMsg.fullText.length) {
@@ -102,7 +103,7 @@ function App() {
   )
 
   const aiSvg = (
-    <img src="/logo.png" alt="SiliconGPT" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+    <img src={logoUrl} alt="SiliconGPT" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
   )
 
   const suggestions = [
@@ -123,7 +124,7 @@ function App() {
           {messages.length === 0 ? (
             <div className="welcome-screen fade-in">
               <div className="welcome-logo">
-                <img src="/logo.png" alt="SiliconGPT Logo" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                <img src={logoUrl} alt="SiliconGPT Logo" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
               </div>
               <h1>How can I help you today?</h1>
               <div className="suggestions-grid">

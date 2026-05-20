@@ -10,6 +10,32 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 
 
+def ensure_lfs_assets() -> None:
+    """Restore required Git LFS files before preprocessing."""
+    required_patterns = [
+        "data/raw/*.pdf",
+        "tokenizer.model",
+        "model.pth",
+        "model_best.pth",
+    ]
+    try:
+        result = subprocess.run(
+            ["git", "lfs", "pull", "--include=" + ",".join(required_patterns)],
+            cwd=str(BASE_DIR),
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            print("\n>> Warning: git lfs pull did not complete successfully. Continuing with available files.")
+            if result.stdout:
+                print(result.stdout.strip())
+            if result.stderr:
+                print(result.stderr.strip())
+    except FileNotFoundError:
+        print("\n>> Warning: git lfs is not installed; continuing without auto-restoring LFS files.")
+
+
 def get_pipeline_python() -> str:
     # Use the project venv if it exists so runs are consistent across machines.
     candidates = [
@@ -63,6 +89,8 @@ Examples:
     parser.add_argument("--skip-preprocess", action="store_true", help="Skip PDF extraction and text cleaning")
     parser.add_argument("--launch-ui", action="store_true", help="Launch Gradio web UI after training")
     args = parser.parse_args()
+
+    ensure_lfs_assets()
 
     # ---- Preprocessing ----
     if not args.skip_preprocess:

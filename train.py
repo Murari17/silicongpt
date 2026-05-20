@@ -125,7 +125,10 @@ def main() -> None:
     seq_len = int(os.getenv("SEQ_LEN", "128"))
     batch_size = int(os.getenv("BATCH_SIZE", "16"))
     grad_accum_steps = int(os.getenv("GRAD_ACCUM", "4"))  # effective batch = 64
-    epochs = int(os.getenv("EPOCHS", "15"))
+    max_epochs = int(os.getenv("EPOCHS", "15"))
+    early_stop_patience = int(os.getenv("EARLY_STOP_PATIENCE", "3"))
+    early_stop_min_delta = float(os.getenv("EARLY_STOP_MIN_DELTA", "0.001"))
+    min_epochs = int(os.getenv("MIN_EPOCHS", "3"))
     max_lr = float(os.getenv("LR", "3e-4"))
     min_lr = max_lr * 0.1
     weight_decay = 0.1
@@ -196,15 +199,18 @@ def main() -> None:
     loss_fn = torch.nn.CrossEntropyLoss()
     scaler = GradScaler(device.type, enabled=use_amp)
 
-    total_steps = len(train_batches) * epochs // grad_accum_steps
+    total_steps = len(train_batches) * max_epochs // grad_accum_steps
     warmup_steps = min(100, total_steps // 10)
 
     # ---- Training ----
     best_val_loss = float("inf")
+    best_epoch = 0
+    epochs_without_improvement = 0
+    epochs_ran = 0
     global_step = 0
     start_time = time.time()
 
-    for epoch in range(epochs):
+    for epoch in range(max_epochs):
         model.train()
         epoch_loss = 0.0
         epoch_tokens = 0
@@ -263,16 +269,20 @@ def main() -> None:
         tok_per_sec = epoch_tokens / (time.time() - start_time) * (epoch + 1) if epoch == 0 else epoch_tokens / ((time.time() - start_time) / (epoch + 1))
 
         print(
-            f"Epoch {epoch + 1:>3}/{epochs} | "
+            f"Epoch {epoch + 1:>3}/{max_epochs} | "
             f"train: {avg_train_loss:.4f} (ppl {train_ppl:.1f}) | "
             f"val: {avg_val_loss:.4f} (ppl {val_ppl:.1f}) | "
             f"lr: {lr:.2e} | "
             f"time: {format_time(elapsed)}"
         )
 
+        epochs_ran = epoch + 1
+
         # ---- Checkpoint best model ----
-        if avg_val_loss < best_val_loss:
+        if (best_val_loss - avg_val_loss) > early_stop_min_delta:
             best_val_loss = avg_val_loss
+            best_epoch = epoch + 1
+            epochs_without_improvement = 0
             torch.save({
                 "model_state_dict": model.state_dict(),
                 "config": config,
@@ -281,12 +291,21 @@ def main() -> None:
                 "val_ppl": val_ppl,
             }, best_model_path)
             print(f"  >> New best model saved (val_loss={avg_val_loss:.4f})")
+        else:
+            epochs_without_improvement += 1
+
+        if epoch + 1 >= min_epochs and epochs_without_improvement >= early_stop_patience:
+            print(
+                f"  >> Early stopping: val loss has not improved by at least {early_stop_min_delta:.4f} "
+                f"for {early_stop_patience} consecutive epochs."
+            )
+            break
 
     # Save final model too
     torch.save({
         "model_state_dict": model.state_dict(),
         "config": config,
-        "epoch": epochs,
+        "epoch": epochs_ran,
         "val_loss": avg_val_loss,
         "val_ppl": val_ppl,
     }, model_out_path)
@@ -294,7 +313,7 @@ def main() -> None:
     total_time = time.time() - start_time
     print("-" * 70)
     print(f"Training complete in {format_time(total_time)}")
-    print(f"Best val loss: {best_val_loss:.4f} (ppl {math.exp(min(best_val_loss, 20)):.1f})")
+    print(f"Best val loss: {best_val_loss:.4f} (ppl {math.exp(min(best_val_loss, 20)):.1f}) at epoch {best_epoch}")
     print(f"Models saved: {model_out_path} (final), {best_model_path} (best)")
 
 
