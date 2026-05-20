@@ -469,8 +469,6 @@ def build_ui() -> gr.Blocks:
                 default_rep_penalty = 1.15
 
                 with gr.Column(elem_classes=["welcome-shell"], visible=True) as welcome:
-                    with gr.Column(elem_classes=["welcome-logo"]):
-                        gr.Image(value=str(BASE_DIR / "logo.png"), show_label=False, interactive=False, container=False)
                     gr.Markdown("<h2>How can I help you today?</h2>")
                     with gr.Row(elem_classes=["suggestions-grid"]):
                         suggestion_buttons = [
