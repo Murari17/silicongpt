@@ -482,7 +482,6 @@ def build_ui() -> gr.Blocks:
                     elem_id="chatbot",
                     label=None,
                     height=560,
-                    show_copy_button=True,
                     bubble_full_width=False,
                     visible=False,
                 )
