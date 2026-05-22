@@ -33,7 +33,7 @@ class ModelConfig:
     n_heads: int = 6
     n_kv_heads: int = 2          # GQA: fewer KV heads → less memory
     max_seq_len: int = 1024
-    ffn_hidden_mult: float = 2.667  # SwiGLU hidden dim ≈ dim * mult
+    ffn_hidden_mult: float = 2.667  # SwiGLU hidden dim = dim * mult
     norm_eps: float = 1e-5
     dropout: float = 0.1
     rope_theta: float = 10000.0
